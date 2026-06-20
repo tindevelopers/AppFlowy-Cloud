@@ -151,6 +151,10 @@ pub fn workspace_scope() -> Scope {
       web::resource("/{workspace_id}/update-member-profile")
         .route(web::put().to(put_workspace_member_profile_handler)),
     )
+    .service(
+      web::resource("/{workspace_id}/workspace-profile")
+        .route(web::get().to(get_workspace_member_profile_handler)),
+    )
     // Deprecated since v0.9.24
     .service(
       web::resource("/{workspace_id}/member/user/{user_id}")
@@ -837,6 +841,23 @@ async fn put_workspace_member_profile_handler(
   let updated_profile = payload.into_inner();
   update_workspace_member_profile(&state.pg_pool, &workspace_id, uid, &updated_profile).await?;
   Ok(AppResponse::Ok().into())
+}
+#[instrument(skip_all, err)]
+async fn get_workspace_member_profile_handler(
+  user_uuid: UserUuid,
+  path: web::Path<Uuid>,
+  state: Data<AppState>,
+) -> Result<JsonAppResponse<MentionablePerson>> {
+  let workspace_id = path.into_inner();
+  let uid = state.user_cache.get_user_uid(&user_uuid).await?;
+  state
+    .workspace_access_control
+    .enforce_role_weak(&uid, &workspace_id, AFRole::Guest)
+    .await?;
+  let person =
+    workspace::ops::get_workspace_mentionable_person(&state.pg_pool, &workspace_id, &user_uuid)
+      .await?;
+  Ok(AppResponse::Ok().with_data(person).into())
 }
 
 #[instrument(skip_all, err)]

@@ -183,7 +183,7 @@ services:
         condition: service_healthy
 
   ai:
-    restart: on-failure
+    restart: "no"
     image: appflowyinc/appflowy_ai:${APPFLOWY_AI_VERSION:-latest}
     environment:
       - AI_SERVER_PORT=${AI_SERVER_PORT}
