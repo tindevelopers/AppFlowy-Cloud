@@ -73,6 +73,7 @@ use rayon::prelude::*;
 use semver::Version;
 use sha2::{Digest, Sha256};
 use shared_entity::dto::publish_dto::DuplicatePublishedPageResponse;
+use shared_entity::dto::billing_dto::WorkspaceUsageAndLimit;
 use shared_entity::dto::workspace_dto::*;
 use shared_entity::response::AppResponseError;
 use shared_entity::response::{AppResponse, JsonAppResponse};
@@ -302,6 +303,10 @@ pub fn workspace_scope() -> Scope {
     )
     .service(
       web::resource("/{workspace_id}/usage").route(web::get().to(get_workspace_usage_handler)),
+    )
+    .service(
+      web::resource("/{workspace_id}/usage-and-limit")
+        .route(web::get().to(get_workspace_usage_and_limit_handler)),
     )
     .service(
       web::resource("/published/{publish_namespace}")
@@ -2454,6 +2459,41 @@ async fn get_workspace_usage_handler(
     .await?;
   let res =
     biz::workspace::ops::get_workspace_document_total_bytes(&state.pg_pool, &workspace_id).await?;
+  Ok(Json(AppResponse::Ok().with_data(res)))
+}
+
+async fn get_workspace_usage_and_limit_handler(
+  user_uuid: UserUuid,
+  workspace_id: web::Path<Uuid>,
+  state: Data<AppState>,
+) -> Result<Json<AppResponse<WorkspaceUsageAndLimit>>> {
+  let workspace_id = workspace_id.into_inner();
+  let uid = state.user_cache.get_user_uid(&user_uuid).await?;
+  state
+    .workspace_access_control
+    .enforce_role_weak(&uid, &workspace_id, AFRole::Member)
+    .await?;
+
+  let member_count = database::workspace::select_workspace_member_count_from_workspace_id(&state.pg_pool, &workspace_id)
+    .await
+    .unwrap_or_default()
+    .unwrap_or(1);
+
+  let res = WorkspaceUsageAndLimit {
+    member_count,
+    member_count_limit: i64::MAX,
+    storage_bytes: 0,
+    storage_bytes_limit: i64::MAX,
+    storage_bytes_unlimited: true,
+    single_upload_limit: i64::MAX,
+    single_upload_unlimited: true,
+    ai_responses_count: 0,
+    ai_responses_count_limit: i64::MAX,
+    ai_image_responses_count: 0,
+    ai_image_responses_count_limit: i64::MAX,
+    local_ai: true,
+    ai_responses_unlimited: true,
+  };
   Ok(Json(AppResponse::Ok().with_data(res)))
 }
 
