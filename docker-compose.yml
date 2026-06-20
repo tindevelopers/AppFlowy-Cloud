@@ -12,6 +12,7 @@ services:
       - ./nginx/ssl/certificate.crt:/etc/nginx/ssl/certificate.crt
       - ./nginx/ssl/private_key.key:/etc/nginx/ssl/private_key.key
       - ./web/dist:/var/www/web:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
 
   # You do not need this if you have configured to use your own s3 file storage
   minio:
