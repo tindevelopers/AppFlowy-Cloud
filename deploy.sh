@@ -48,9 +48,10 @@ echo "=== Preparing server files ==="
 # Create a temp deploy bundle
 DEPLOY_BUNDLE=$(mktemp -d)
 mkdir -p "$DEPLOY_BUNDLE/web"
+mkdir -p "$DEPLOY_BUNDLE/nginx"
 cp -r "$WEB_APP_DIR/dist" "$DEPLOY_BUNDLE/web/"
 cp "$SCRIPT_DIR/docker-compose.yml" "$DEPLOY_BUNDLE/"
-cp "$SCRIPT_DIR/nginx/nginx.conf" "$DEPLOY_BUNDLE/"
+cp "$SCRIPT_DIR/nginx/nginx.conf" "$DEPLOY_BUNDLE/nginx/nginx.conf"
 cp "$SCRIPT_DIR/.env" "$DEPLOY_BUNDLE/"
 
 # Generate self-signed SSL cert for initial setup
