@@ -188,8 +188,8 @@ services:
     environment:
       - AI_SERVER_PORT=${AI_SERVER_PORT}
       - OPENAI_API_KEY=${AI_OPENAI_API_KEY}
-      - DEFAULT_AI_MODEL=gpt-4.1-mini # Make sure the model is available in your OpenAI account
-      - DEFAULT_AI_COMPLETION_MODEL=gpt-4.1-mini # Make sure the model is available in your OpenAI account
+      - DEFAULT_AI_MODEL=gpt-5.4-mini-2026-03-17 # Make sure the model is available in your OpenAI account
+      - DEFAULT_AI_COMPLETION_MODEL=gpt-5.4-mini-2026-03-17 # Make sure the model is available in your OpenAI account
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION}
