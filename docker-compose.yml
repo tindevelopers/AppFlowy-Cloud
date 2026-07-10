@@ -183,8 +183,12 @@ services:
         condition: service_healthy
 
   ai:
-    restart: "no"
-    image: appflowyinc/appflowy_ai:${APPFLOWY_AI_VERSION:-latest}
+    restart: unless-stopped
+    # Self-built lightweight replacement for the closed-source, license-gated
+    # appflowyinc/appflowy_ai image (see services/ai-proxy). Speaks the same
+    # HTTP contract on port 5001, backed directly by OpenAI/Azure OpenAI.
+    build:
+      context: ./services/ai-proxy
     environment:
       - AI_SERVER_PORT=${AI_SERVER_PORT}
       - OPENAI_API_KEY=${AI_OPENAI_API_KEY}
