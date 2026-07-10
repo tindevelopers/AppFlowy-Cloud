@@ -1,0 +1,17 @@
+{
+  "name": "@tin/appflowy-folder-recovery",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tin-only maintenance CLI for rebuilding af_folder_view from the intact Yjs Folder collab documents when the closed-source appflowy_search outbox consumer is stalled.",
+  "bin": {
+    "af-folder-audit": "./bin/audit.js",
+    "af-folder-rebuild": "./bin/rebuild.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "pg": "^8.13.0",
+    "yjs": "^13.6.20"
+  }
+}
