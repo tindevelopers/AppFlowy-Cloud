@@ -100,6 +100,21 @@ ssh $SSH_OPTS "root@$SERVER_IP" <<REMOTE
 cd /opt/appflowy-cloud
 
 echo "Pulling latest Docker images..."
+
+# GHCR authentication check (one-time VPS setup required).
+# The Tin-custom images are hosted on GitHub Container Registry.
+# If the packages are private, the VPS needs a PAT with read:packages:
+#   echo "<PAT>" | docker login ghcr.io -u tindevelopers --password-stdin
+# Or make the packages public at https://github.com/orgs/tindevelopers/packages
+if ! docker pull ghcr.io/tindevelopers/appflowy_cloud:latest --quiet 2>/dev/null; then
+  echo ""
+  echo "⚠️  Cannot pull from ghcr.io/tindevelopers."
+  echo "   The VPS needs GitHub Container Registry authentication:"
+  echo "     echo \"<PAT-with-read:packages>\" | docker login ghcr.io -u tindevelopers --password-stdin"
+  echo "   Or make packages public: https://github.com/orgs/tindevelopers/packages"
+  echo ""
+fi
+
 docker compose pull
 
 echo "Starting services..."
