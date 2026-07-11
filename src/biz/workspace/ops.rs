@@ -399,12 +399,11 @@ pub async fn invite_workspace_members(
     let workspace_name = workspace_name.clone();
     let workspace_member_count = workspace_member_count.to_string();
 
-    // use default icon until we have workspace icon
-    let workspace_icon_url =
-      "https://miro.medium.com/v2/resize:fit:2400/1*mTPfm7CwU31-tLhtLNkyJw.png".to_string();
-    let user_icon_url =
-      "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png"
-        .to_string();
+    // Inline base64 placeholders — no external hosting needed, no spam triggers.
+    const WORKSPACE_DEFAULT_ICON: &str = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADwAAAA8CAYAAAA6/NlyAAAA2ElEQVR4nO3PQQ7CQAxD0d6GA3PgInYIURjaiX+SsSXv/9s2zwvZ/bbvdMP0PVFnT7cP7wqyFD4CmhKugKaBE1gETULlcBooRdMwKZoGSdE0RIqmAXI0HS8F0+FSNB0sR9OxUjAdKkfTkVIwHShH03EGR4LpMDmajjLYYIMNNvgITAcZHY01uNkNNrjZDe6MPsQa3ORfwd3QP7FLgrugh7FLgquj/8ZWRp/GLgmuhr6MrYSehq2Ano7NjA7DZkSHY7PApVAajWFftwz0fctAP20J5OhaojLuAQgzDp/S97tyAAAAAElFTkSuQmCC";
+    const USER_DEFAULT_AVATAR: &str = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAsUlEQVR4nO3SwQ2AMAwEwfT/pgOaoDsQBSBCzvY6wSf5vyO5tdri2/bjpBu6dod+Pbp5KDoFxjI8HOIZ746IiHdBRIabQ8h4EwQdLwHocAlBB0sIOlRG0JESgA6UEXTcvwF0mIygowpARxWAjpIAdNDvEOu9UAEKUIB5EI/xBcgAyI54jV8CkBXRHZ8R8Tk+E2I4fgkAjZDjKYhpeDTCLT4C4R7vBQkNt8LQzV2bJpTaBeA8XVaS8e6oAAAAAElFTkSuQmCC";
+    let workspace_icon_url = WORKSPACE_DEFAULT_ICON.to_string();
+    let user_icon_url = USER_DEFAULT_AVATAR.to_string();
 
     let invite_id = match pending_invitations.get(&invitation.email) {
       None => {
