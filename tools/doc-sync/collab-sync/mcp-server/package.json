@@ -1,0 +1,10 @@
+{
+  "name": "appflowy-collab-sync-mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP server wrapping the collab-sync Rust binary for AppFlowy workspace management",
+  "main": "index.js",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}

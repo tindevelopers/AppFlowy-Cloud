@@ -1,0 +1,26 @@
+[package]
+name = "collab-sync"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Pinned to the exact revisions used by frontend/rust-lib so the Yjs/collab
+# wire format matches what the Tin AppFlowy-Cloud server and live clients use.
+[dependencies]
+client-api = { git = "https://github.com/AppFlowy-IO/AppFlowy-Cloud", rev = "592f644", features = ["enable_brotli"] }
+client-api-entity = { git = "https://github.com/AppFlowy-IO/AppFlowy-Cloud", rev = "592f644" }
+collab = { version = "0.2", git = "https://github.com/AppFlowy-IO/AppFlowy-Collab", rev = "4dfccef" }
+collab-entity = { version = "0.2", git = "https://github.com/AppFlowy-IO/AppFlowy-Collab", rev = "4dfccef" }
+collab-document = { version = "0.2", git = "https://github.com/AppFlowy-IO/AppFlowy-Collab", rev = "4dfccef" }
+
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+uuid = { version = "1", features = ["v4"] }
+anyhow = "1"
+dotenvy = "0.15"
+serde_json = "1"
+
+[patch.crates-io]
+collab = { version = "0.2", git = "https://github.com/AppFlowy-IO/AppFlowy-Collab", rev = "4dfccef" }
+collab-entity = { version = "0.2", git = "https://github.com/AppFlowy-IO/AppFlowy-Collab", rev = "4dfccef" }
+collab-folder = { version = "0.2", git = "https://github.com/AppFlowy-IO/AppFlowy-Collab", rev = "4dfccef" }
+collab-document = { version = "0.2", git = "https://github.com/AppFlowy-IO/AppFlowy-Collab", rev = "4dfccef" }
