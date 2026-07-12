@@ -1,4 +1,7 @@
-use crate::api::util::{client_version_from_headers, realtime_user_for_web_request, PayloadReader};
+use crate::api::util::{
+  client_version_from_headers, exclude_guest_from_headers, realtime_user_for_web_request,
+  PayloadReader,
+};
 use crate::api::util::{compress_type_from_header_value, device_id_from_headers};
 use crate::api::ws::RealtimeServerAddr;
 use crate::biz;
@@ -70,7 +73,6 @@ use itertools::Itertools;
 use prost::Message as ProstMessage;
 use rayon::prelude::*;
 
-use semver::Version;
 use sha2::{Digest, Sha256};
 use shared_entity::dto::publish_dto::DuplicatePublishedPageResponse;
 use shared_entity::dto::billing_dto::WorkspaceUsageAndLimit;
@@ -521,12 +523,7 @@ async fn list_workspace_handler(
   query: web::Query<QueryWorkspaceParam>,
   req: HttpRequest,
 ) -> Result<JsonAppResponse<Vec<AFWorkspace>>> {
-  let app_version = client_version_from_headers(req.headers())
-    .ok()
-    .and_then(|s| Version::parse(s).ok());
-  let exclude_guest = app_version
-    .map(|s| s < Version::new(0, 9, 4))
-    .unwrap_or(true);
+  let exclude_guest = exclude_guest_from_headers(req.headers());
   let QueryWorkspaceParam {
     include_member_count,
     include_role,

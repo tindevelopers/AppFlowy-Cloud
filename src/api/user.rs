@@ -1,4 +1,4 @@
-use crate::api::util::client_version_from_headers;
+use crate::api::util::exclude_guest_from_headers;
 use crate::biz::authentication::jwt::{Authorization, UserUuid};
 use crate::biz::user::image_asset::{get_user_image_asset, upload_user_image_asset};
 use crate::biz::user::user_delete::delete_user;
@@ -12,7 +12,6 @@ use actix_web::web::{Data, Json};
 use actix_web::{web, HttpResponse, Scope};
 use actix_web::{HttpRequest, Result};
 use database_entity::dto::{AFUserProfile, AFUserWorkspaceInfo, UserImageAssetSource};
-use semver::Version;
 use shared_entity::dto::auth_dto::{DeleteUserQuery, SignInTokenResponse, UpdateUserParams};
 use shared_entity::response::AppResponseError;
 use shared_entity::response::{AppResponse, JsonAppResponse};
@@ -62,12 +61,7 @@ async fn get_user_workspace_info_handler(
   state: Data<AppState>,
   req: HttpRequest,
 ) -> Result<JsonAppResponse<AFUserWorkspaceInfo>> {
-  let app_version = client_version_from_headers(req.headers())
-    .ok()
-    .and_then(|s| Version::parse(s).ok());
-  let exclude_guest = app_version
-    .map(|s| s < Version::new(0, 9, 4))
-    .unwrap_or(true);
+  let exclude_guest = exclude_guest_from_headers(req.headers());
 
   let info = get_user_workspace_info(&state.pg_pool, &uuid, exclude_guest).await?;
   Ok(AppResponse::Ok().with_data(info).into())

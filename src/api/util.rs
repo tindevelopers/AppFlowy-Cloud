@@ -10,6 +10,7 @@ use chrono::Utc;
 use collab_rt_entity::user::RealtimeUser;
 use collab_rt_protocol::validate_encode_collab;
 use database_entity::dto::CollabParams;
+use semver::Version;
 use std::str::FromStr;
 use tokio_stream::StreamExt;
 use uuid::Uuid;
@@ -77,6 +78,26 @@ pub fn client_version_from_headers(headers: &HeaderMap) -> Result<&str, AppError
     &["Client-Version", "client-version", "client_version"],
     "Missing Client-Version or client-version header",
   )
+}
+
+/// Determine whether guest workspaces should be excluded from a user's
+/// workspace listing, based on the requesting client's declared version.
+///
+/// The AppFlowy web client sends the literal string "web" (not a semver) as
+/// its Client-Version header. Since the web client is continuously deployed
+/// with the latest server-compatible features, it must never be treated as
+/// an outdated (< 0.9.4) client that predates guest support, or every guest
+/// would be permanently unable to load their workspace from the web app.
+/// Native clients that omit the header, or send an unparseable version,
+/// keep the original conservative default of excluding guest workspaces.
+pub fn exclude_guest_from_headers(headers: &HeaderMap) -> bool {
+  match client_version_from_headers(headers).ok() {
+    Some("web") => false,
+    Some(version_str) => Version::parse(version_str)
+      .map(|v| v < Version::new(0, 9, 4))
+      .unwrap_or(true),
+    None => true,
+  }
 }
 
 /// Retrieve device ID from headers
