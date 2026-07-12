@@ -1,7 +1,7 @@
 use app_error::AppError;
 use chrono::{DateTime, Utc};
 use collab_entity::{CollabType, EncodedCollab};
-use database_entity::dto::{AFRole, AFWebUser, AFWorkspaceInvitationStatus, PublishInfo};
+use database_entity::dto::{AFAccessLevel, AFRole, AFWebUser, AFWorkspaceInvitationStatus, PublishInfo};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -328,6 +328,11 @@ pub struct TrashSectionItems {
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceViews {
+  pub views: Vec<FolderView>,
+}
+
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct FolderView {
   pub view_id: Uuid,
   pub parent_view_id: Option<Uuid>,
@@ -347,6 +352,8 @@ pub struct FolderView {
   /// contains fields like `is_space`, and font information
   pub extra: Option<serde_json::Value>,
   pub children: Vec<FolderView>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub access_level: Option<AFAccessLevel>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
@@ -480,6 +487,23 @@ impl ListDatabaseRowDetailParam {
 pub struct QueryWorkspaceFolder {
   pub depth: Option<u32>,
   pub root_view_id: Option<Uuid>,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct QueryWorkspaceView {
+  pub depth: Option<u32>,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct QueryWorkspaceViews {
+  pub depth: Option<u32>,
+  pub view_ids: String,
+}
+
+#[derive(Default, Debug, Deserialize, Serialize)]
+pub struct WorkspaceViewsBatch {
+  pub depth: u32,
+  pub view_ids: Vec<Uuid>,
 }
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]

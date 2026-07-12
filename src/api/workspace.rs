@@ -65,6 +65,10 @@ use collab_rt_entity::user::RealtimeUser;
 use collab_rt_entity::RealtimeMessage;
 use collab_rt_protocol::collab_from_encode_collab;
 use database::user::select_uid_from_email;
+use database::workspace::select_user_role;
+use database::publish::select_published_view_ids_for_workspace;
+use std::collections::HashSet;
+use appflowy_collaborate::ws2::WorkspaceCollabInstanceCache;
 use database_entity::dto::PublishCollabItem;
 use database_entity::dto::PublishInfo;
 use database_entity::dto::*;
@@ -375,6 +379,15 @@ pub fn workspace_scope() -> Scope {
     .service(
       web::resource("/{workspace_id}/folder").route(web::get().to(get_workspace_folder_handler)),
     )
+    .service(
+      web::resource("/{workspace_id}/view/{view_id}")
+        .route(web::get().to(get_workspace_view_handler)),
+    )
+    .service(
+      web::resource("/{workspace_id}/views")
+        .route(web::get().to(get_workspace_views_batch_handler))
+        .route(web::post().to(post_workspace_views_batch_handler)),
+    )
     .service(web::resource("/{workspace_id}/recent").route(web::get().to(get_recent_views_handler)))
     .service(
       web::resource("/{workspace_id}/favorite").route(web::get().to(get_favorite_views_handler)),
@@ -413,6 +426,10 @@ pub fn workspace_scope() -> Scope {
     .service(
       web::resource("/{workspace_id}/database/{database_id}/row/detail")
         .route(web::get().to(list_database_row_details_handler)),
+    )
+    .service(
+      web::resource("/{workspace_id}/database/{database_id}/blob/diff")
+        .route(web::post().to(database_blob_diff_handler)),
     )
     .service(
       web::resource("/{workspace_id}/quick-note")
@@ -2534,15 +2551,145 @@ async fn get_workspace_folder_handler(
     .enforce_role_weak(&uid, &workspace_id, AFRole::Member)
     .await?;
   let root_view_id = query.root_view_id.unwrap_or(workspace_id);
+  let role = select_user_role(&state.pg_pool, &uid, &workspace_id).await?;
+  let access_level = Some(AFAccessLevel::from(&role));
   let folder_view = biz::collab::ops::get_user_workspace_structure(
     &state,
     user,
     workspace_id,
     depth,
     &root_view_id,
+    access_level,
   )
   .await?;
   Ok(Json(AppResponse::Ok().with_data(folder_view)))
+}
+
+async fn get_workspace_view_handler(
+  user_uuid: UserUuid,
+  path: web::Path<(Uuid, Uuid)>,
+  state: Data<AppState>,
+  query: web::Query<QueryWorkspaceView>,
+  req: HttpRequest,
+) -> Result<Json<AppResponse<FolderView>>> {
+  let depth = query.depth.unwrap_or(1);
+  let (workspace_id, view_id) = path.into_inner();
+  let uid = state.user_cache.get_user_uid(&user_uuid).await?;
+  let user = realtime_user_for_web_request(req.headers(), uid)?;
+  state
+    .workspace_access_control
+    .enforce_action(&uid, &workspace_id, Action::Read)
+    .await?;
+  let role = select_user_role(&state.pg_pool, &uid, &workspace_id).await?;
+  let access_level = Some(AFAccessLevel::from(&role));
+  let folder_view = biz::collab::ops::get_user_workspace_structure(
+    &state,
+    user,
+    workspace_id,
+    depth,
+    &view_id,
+    access_level,
+  )
+  .await?;
+  Ok(Json(AppResponse::Ok().with_data(folder_view)))
+}
+
+async fn get_workspace_views_batch_handler(
+  user_uuid: UserUuid,
+  workspace_id: web::Path<Uuid>,
+  state: Data<AppState>,
+  query: web::Query<QueryWorkspaceViews>,
+  req: HttpRequest,
+) -> Result<Json<AppResponse<WorkspaceViews>>> {
+  let workspace_id = workspace_id.into_inner();
+  let depth = query.depth.unwrap_or(2);
+  let view_ids: Vec<Uuid> = query
+    .view_ids
+    .split(',')
+    .filter_map(|s| Uuid::parse_str(s.trim()).ok())
+    .collect();
+  if view_ids.is_empty() {
+    return Ok(Json(
+      AppResponse::Ok().with_data(WorkspaceViews { views: vec![] }),
+    ));
+  }
+  let views = build_workspace_views(
+    &state,
+    &user_uuid,
+    workspace_id,
+    depth,
+    &view_ids,
+    req.headers(),
+  )
+  .await?;
+  Ok(Json(AppResponse::Ok().with_data(WorkspaceViews { views })))
+}
+
+async fn post_workspace_views_batch_handler(
+  user_uuid: UserUuid,
+  workspace_id: web::Path<Uuid>,
+  state: Data<AppState>,
+  body: Json<WorkspaceViewsBatch>,
+  req: HttpRequest,
+) -> Result<Json<AppResponse<WorkspaceViews>>> {
+  let workspace_id = workspace_id.into_inner();
+  let batch = body.into_inner();
+  if batch.view_ids.is_empty() {
+    return Ok(Json(
+      AppResponse::Ok().with_data(WorkspaceViews { views: vec![] }),
+    ));
+  }
+  let views = build_workspace_views(
+    &state,
+    &user_uuid,
+    workspace_id,
+    batch.depth,
+    &batch.view_ids,
+    req.headers(),
+  )
+  .await?;
+  Ok(Json(AppResponse::Ok().with_data(WorkspaceViews { views })))
+}
+
+async fn build_workspace_views(
+  state: &Data<AppState>,
+  user_uuid: &UserUuid,
+  workspace_id: Uuid,
+  depth: u32,
+  view_ids: &[Uuid],
+  headers: &actix_http::header::HeaderMap,
+) -> Result<Vec<FolderView>, AppResponseError> {
+  let uid = state.user_cache.get_user_uid(user_uuid).await?;
+  let user = realtime_user_for_web_request(headers, uid)?;
+  state
+    .workspace_access_control
+    .enforce_action(&uid, &workspace_id, Action::Read)
+    .await?;
+  let role = select_user_role(&state.pg_pool, &uid, &workspace_id).await?;
+  let access_level = Some(AFAccessLevel::from(&role));
+  let folder = state.ws_server.get_folder(workspace_id).await?;
+  let publish_view_ids =
+    select_published_view_ids_for_workspace(&state.pg_pool, workspace_id)
+      .await
+      .map_err(|e| AppResponseError::new(ErrorCode::Internal, e.to_string()))?;
+  let publish_view_ids: HashSet<_> = publish_view_ids.into_iter().collect();
+  let views = view_ids
+    .iter()
+    .filter_map(|vid| {
+      crate::biz::collab::folder_view::collab_folder_to_folder_view(
+        workspace_id,
+        vid,
+        &folder,
+        depth,
+        &publish_view_ids,
+        uid,
+        access_level,
+      )
+      .ok()
+    })
+    .collect();
+  let _ = user;
+  Ok(views)
 }
 
 async fn get_recent_views_handler(
@@ -2807,6 +2954,35 @@ async fn list_database_row_details_handler(
   )
   .await?;
   Ok(Json(AppResponse::Ok().with_data(db_rows)))
+}
+
+async fn database_blob_diff_handler(
+  user_uuid: UserUuid,
+  path: web::Path<(Uuid, Uuid)>,
+  state: Data<AppState>,
+  _payload: Bytes,
+) -> HttpResponse {
+  let (workspace_id, _database_id) = path.into_inner();
+  let uid = match state.user_cache.get_user_uid(&user_uuid).await {
+    Ok(uid) => uid,
+    Err(e) => return AppResponseError::new(ErrorCode::Internal, e.to_string()).error_response(),
+  };
+  if state
+    .workspace_access_control
+    .enforce_action(&uid, &workspace_id, Action::Read)
+    .await
+    .is_err()
+  {
+    return HttpResponse::Forbidden().finish();
+  }
+
+  // Protobuf-encoded DatabaseBlobDiffResponse with status=PENDING(1), retry_after_secs=300
+  // Field 6 (status, varint): tag=0x30, value=0x01
+  // Field 7 (retry_after_secs, varint): tag=0x38, value=300 (0xAC02 in varint)
+  let response_bytes: Vec<u8> = vec![0x30, 0x01, 0x38, 0xAC, 0x02];
+  HttpResponse::Ok()
+    .content_type("application/octet-stream")
+    .body(response_bytes)
 }
 
 #[inline]
