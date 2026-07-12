@@ -306,6 +306,7 @@ services:
     restart: on-failure
     image: containrrr/watchtower
     environment:
+      - DOCKER_API_VERSION=1.41
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=300
       - WATCHTOWER_SCOPE=appflowy-auto-update
