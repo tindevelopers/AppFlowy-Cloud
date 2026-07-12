@@ -1926,6 +1926,7 @@ async fn get_page_view_collab_for_orphaned_view(
       is_locked: Some(false),
       extra: None,
       children: vec![],
+      access_level: None,
     },
     data,
     owner: owner.clone(),
@@ -1982,6 +1983,7 @@ async fn get_page_view_collab_for_view_with_parent(
     is_locked: view.is_locked,
     extra: view.extra.as_ref().map(|e| parse_extra_field_as_json(e)),
     children: vec![],
+    access_level: None,
   };
   let page_collab_data = match view.layout {
     collab_folder::ViewLayout::Document => {

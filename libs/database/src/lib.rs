@@ -10,6 +10,7 @@ pub mod pg_row;
 pub mod publish;
 pub mod quick_note;
 pub mod resource_usage;
+pub mod shared_view;
 pub mod template;
 pub mod user;
 pub mod workspace;

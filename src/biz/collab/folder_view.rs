@@ -9,6 +9,7 @@ use shared_entity::dto::workspace_dto::{
   self, FavoriteFolderView, FolderView, FolderViewMinimal, RecentFolderView, TrashFolderView,
   ViewLayout,
 };
+use database_entity::dto::AFAccessLevel;
 use uuid::Uuid;
 
 use crate::biz::collab::utils::DUMMY_UID;
@@ -67,6 +68,7 @@ pub fn collab_folder_to_folder_view(
   max_depth: u32,
   pubished_view_ids: &HashSet<Uuid>,
   uid: i64,
+  access_level: Option<AFAccessLevel>,
 ) -> Result<FolderView, AppError> {
   let private_space_and_trash_view_ids = private_space_and_trash_view_ids(uid, folder)?;
 
@@ -81,6 +83,7 @@ pub fn collab_folder_to_folder_view(
     0,
     max_depth,
     uid,
+    access_level,
   )
   .ok_or(AppError::InvalidFolderView(format!(
     "There is no valid folder view belonging to the root view id: {}",
@@ -120,6 +123,7 @@ fn to_folder_view(
   depth: u32,
   max_depth: u32,
   uid: i64,
+  access_level: Option<AFAccessLevel>,
 ) -> Option<FolderView> {
   let is_trash = private_space_and_trash_views
     .view_ids_in_trash
@@ -183,6 +187,7 @@ fn to_folder_view(
         depth + 1,
         max_depth,
         uid,
+        access_level,
       )
     })
     .collect();
@@ -207,6 +212,7 @@ fn to_folder_view(
     is_locked: view.is_locked,
     extra,
     children,
+    access_level,
   })
 }
 
@@ -248,6 +254,7 @@ pub fn section_items_to_favorite_folder_view(
           is_locked: v.is_locked,
           extra,
           children: vec![],
+          access_level: None,
         };
         FavoriteFolderView {
           view: folder_view,
@@ -289,6 +296,7 @@ pub fn section_items_to_recent_folder_view(
           is_locked: v.is_locked,
           extra: v.extra.as_ref().map(|e| parse_extra_field_as_json(e)),
           children: vec![],
+          access_level: None,
         };
         RecentFolderView {
           view: folder_view,
@@ -328,6 +336,7 @@ pub fn section_items_to_trash_folder_view(
           is_locked: v.is_locked,
           extra: v.extra.as_ref().map(|e| parse_extra_field_as_json(e)),
           children: vec![],
+          access_level: None,
         };
         TrashFolderView {
           view: folder_view,

@@ -32,6 +32,7 @@ use database::collab::{CollabStore, GetCollabOrigin};
 use database::publish::select_published_view_ids_for_workspace;
 use database::publish::select_published_view_ids_with_publish_info_for_workspace;
 use database::publish::select_workspace_id_for_publish_namespace;
+use database_entity::dto::AFAccessLevel;
 use database_entity::dto::CollabParams;
 use database_entity::dto::QueryCollab;
 use database_entity::dto::QueryCollabResult;
@@ -255,6 +256,7 @@ pub async fn get_user_workspace_structure(
   workspace_id: Uuid,
   depth: u32,
   root_view_id: &Uuid,
+  access_level: Option<AFAccessLevel>,
 ) -> Result<FolderView, AppError> {
   let appflowy_web_metrics = &state.metrics.appflowy_web_metrics;
   let depth_limit = 10;
@@ -284,6 +286,7 @@ pub async fn get_user_workspace_structure(
     depth,
     &publish_view_ids,
     user.uid,
+    access_level,
   )
 }
 
