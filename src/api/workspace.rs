@@ -79,6 +79,7 @@ use rayon::prelude::*;
 
 use sha2::{Digest, Sha256};
 use shared_entity::dto::publish_dto::DuplicatePublishedPageResponse;
+use shared_entity::dto::publish_snapshot_dto::PublishedPageSnapshotDto;
 use shared_entity::dto::billing_dto::WorkspaceUsageAndLimit;
 use shared_entity::dto::workspace_dto::*;
 use shared_entity::response::AppResponseError;
@@ -325,6 +326,10 @@ pub fn workspace_scope() -> Scope {
     .service(
       web::resource("/v1/published/{publish_namespace}/{publish_name}")
         .route(web::get().to(get_v1_published_collab_handler)),
+    )
+    .service(
+      web::resource("/v2/published/{publish_namespace}/{publish_name}/snapshot")
+        .route(web::get().to(get_published_page_snapshot_handler)),
     )
     .service(
       web::resource("/published/{publish_namespace}/{publish_name}/blob")
@@ -2163,6 +2168,20 @@ async fn get_v1_published_collab_handler(
     .get_collab_metadata(&workspace_namespace, &publish_name)
     .await?;
   Ok(Json(AppResponse::Ok().with_data(metadata)))
+}
+
+async fn get_published_page_snapshot_handler(
+  path_param: web::Path<(String, String)>,
+  state: Data<AppState>,
+) -> Result<Json<AppResponse<PublishedPageSnapshotDto>>> {
+  let (publish_namespace, publish_name) = path_param.into_inner();
+  let snapshot = biz::workspace::publish_snapshot::get_published_page_snapshot(
+    &state,
+    &publish_namespace,
+    &publish_name,
+  )
+  .await?;
+  Ok(Json(AppResponse::Ok().with_data(snapshot)))
 }
 
 async fn get_published_collab_blob_handler(

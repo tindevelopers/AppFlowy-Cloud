@@ -114,7 +114,7 @@ pub struct PublishCollabDuplicator {
   collab_metrics: Arc<CollabMetrics>,
 }
 
-fn deserialize_publish_database_data(
+pub(crate) fn deserialize_publish_database_data(
   published_blob: &[u8],
 ) -> Result<PublishDatabaseData, AppError> {
   match serde_json::from_slice::<PublishDatabaseData>(published_blob) {
