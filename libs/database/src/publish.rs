@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use app_error::AppError;
 use database_entity::dto::{
   PatchPublishedCollab, PublishCollabItem, PublishCollabKey, PublishInfo, WorkspaceNamespace,
@@ -265,6 +267,14 @@ pub async fn insert_or_replace_publish_collabs(
   });
 
   let mut txn = pg_pool.begin().await?;
+
+  // Remove any existing published records for these view_ids in ANY workspace
+  // to ensure a view_id is only published in one workspace at a time.
+  sqlx::query("DELETE FROM af_published_collab WHERE view_id = ANY($1)")
+    .bind(&view_ids)
+    .execute(txn.as_mut())
+    .await?;
+
   delete_published_collabs(&mut txn, workspace_id, &publish_names).await?;
 
   let res = sqlx::query!(
@@ -598,13 +608,25 @@ pub async fn select_publish_info_for_view_ids(
   if res.is_empty() {
     return Ok(res);
   }
-  if let Some(non_original_namespace) =
-    select_most_recent_non_original_namespace(pg_pool, &res[0].namespace).await?
-  {
-    res.iter_mut().for_each(|info| {
-      info.namespace.clone_from(&non_original_namespace);
-    });
+
+  // Group by original namespace to fetch non-original namespaces efficiently
+  let mut namespace_map: HashMap<String, String> = HashMap::new();
+  for info in &res {
+    if !namespace_map.contains_key(&info.namespace) {
+      if let Some(non_original) =
+        select_most_recent_non_original_namespace(pg_pool, &info.namespace).await?
+      {
+        namespace_map.insert(info.namespace.clone(), non_original);
+      }
+    }
   }
+
+  for info in &mut res {
+    if let Some(non_original) = namespace_map.get(&info.namespace) {
+      info.namespace.clone_from(non_original);
+    }
+  }
+
   Ok(res)
 }
 

@@ -72,7 +72,7 @@ pub struct PublishedDatabaseDto {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum PublishedPageSnapshotDto {
-  #[serde(rename = "document")]
+  #[serde(rename = "document", rename_all = "camelCase")]
   Document {
     schema_version: u8,
     namespace: String,
@@ -80,7 +80,7 @@ pub enum PublishedPageSnapshotDto {
     view: PublishedViewDto,
     document: PublishedDocumentDto,
   },
-  #[serde(rename = "database")]
+  #[serde(rename = "database", rename_all = "camelCase")]
   Database {
     schema_version: u8,
     namespace: String,

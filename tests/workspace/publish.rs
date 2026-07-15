@@ -1168,6 +1168,7 @@ async fn duplicate_to_workspace_doc_inline_database() {
       5,
       &HashSet::default(),
       client_2.uid().await,
+      None,
     )
     .unwrap();
     let doc_3_fv = folder_view.children[0]
@@ -1905,3 +1906,4 @@ async fn test_republish_patch() {
   .await
   .unwrap();
 }
+
